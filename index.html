@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAT 353 — Topic Quiz Challenge</title>
+<style>
+  :root {
+    --navy: #0f2942;
+    --accent: #d97706;
+    --green: #15803d;
+    --red: #b91c1c;
+    --bg: #f4f6f8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    color: #1f2937;
+  }
+  header {
+    background: var(--navy);
+    color: white;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+  header p { margin: 0; opacity: 0.85; font-size: 0.95rem; }
+
+  /* Topic tabs */
+  .topic-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 1100px;
+    margin: 20px auto 0;
+    padding: 0 16px;
+  }
+  .topic-tab {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  .topic-tab:hover { border-color: var(--accent); }
+  .topic-tab.active {
+    border-color: var(--navy);
+    background: var(--navy);
+    color: white;
+  }
+  .topic-tab .status {
+    display: block;
+    font-weight: 400;
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 20px auto 24px;
+    padding: 0 16px;
+  }
+  @media (min-width: 900px) {
+    .layout { grid-template-columns: 2fr 1fr; align-items: start; }
+  }
+
+  .card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    padding: 20px;
+  }
+
+  #nameGate label { display: block; margin-bottom: 8px; font-weight: 600; }
+  #nameGate input {
+    width: 100%; padding: 10px; font-size: 1rem;
+    border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 12px;
+  }
+  #nameGate .hint { font-size: 0.85rem; color: #64748b; margin-top: -4px; margin-bottom: 14px; }
+  button {
+    background: var(--navy); color: white; border: none;
+    padding: 10px 18px; border-radius: 6px; font-size: 1rem;
+    cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+  button:disabled { background: #94a3b8; cursor: not-allowed; }
+
+  .question {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 0;
+  }
+  .question:last-child { border-bottom: none; }
+  .question p.stem { font-weight: 600; margin: 0 0 10px; }
+  .choices label {
+    display: block;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .choices label:hover { background: #f8fafc; }
+  .choices input { margin-right: 8px; }
+
+  #timer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  #resultBox { text-align: center; padding: 30px 20px; }
+  #resultBox .score { font-size: 2.4rem; font-weight: 700; color: var(--green); }
+
+  table.leaderboard { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  table.leaderboard th, table.leaderboard td {
+    text-align: left; padding: 8px 6px; border-bottom: 1px solid #e5e7eb;
+  }
+  table.leaderboard th { color: #64748b; font-weight: 600; }
+  tr.rank-1 { background: #fef3c7; font-weight: 700; }
+  tr.rank-2 { background: #f1f5f9; }
+  tr.rank-3 { background: #f8fafc; }
+  #lbUpdated { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
+  .hidden { display: none !important; }
+  #topicHeading { margin: 0 0 4px; font-size: 1.15rem; color: var(--navy); }
+  #topicSub { margin: 0 0 16px; font-size: 0.88rem; color: #64748b; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>STAT 353 — Topic Quiz Challenge</h1>
+  <p>Statistical Methods for Engineering &nbsp;|&nbsp; Teams compete topic by topic &nbsp;|&nbsp; Best score wins each round</p>
+</header>
+
+<div class="topic-tabs" id="topicTabs"></div>
+
+<div class="layout">
+  <!-- LEFT: Quiz -->
+  <div>
+    <h2 id="topicHeading"></h2>
+    <p id="topicSub"></p>
+
+    <div class="card" id="nameGate">
+      <label for="teamName">Enter your team name to begin:</label>
+      <input type="text" id="teamName" placeholder="e.g. Team Bernoulli" autocomplete="off">
+      <div class="hint">Each team gets one attempt per topic — best score wins that round.</div>
+      <button id="startBtn">Start Quiz</button>
+    </div>
+
+    <form class="card hidden" id="quizForm">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>Time elapsed: <span id="timer">00:00</span></div>
+        <div id="progress" style="color:#64748b; font-size:0.9rem;"></div>
+      </div>
+      <div id="questionContainer"></div>
+      <div style="margin-top: 16px; text-align:center;">
+        <button type="submit" id="submitBtn">Submit Quiz</button>
+      </div>
+    </form>
+
+    <div class="card hidden" id="resultBox">
+      <div>Your team scored</div>
+      <div class="score"><span id="scoreVal">0</span>/<span id="scoreTotal">20</span></div>
+      <div id="rankMsg" style="margin-top:10px; color:#475569;"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Live leaderboard -->
+  <div class="card">
+    <h3 style="margin-top:0;">🏆 Live Leaderboard — <span id="lbTopicLabel"></span></h3>
+    <table class="leaderboard">
+      <thead><tr><th>#</th><th>Team</th><th>Score</th></tr></thead>
+      <tbody id="leaderboardBody">
+        <tr><td colspan="3" style="color:#94a3b8;">Loading…</td></tr>
+      </tbody>
+    </table>
+    <div id="lbUpdated"></div>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIGURE THIS ============ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZ4itzIHCdmc_saKucAIVk-Qzck9rqkFFPeraNMMmOdyNR5XSfYax4iwzQzcQnQqlMOw/exec'; // ends in /exec
+/* ========================================= */
+
+/* ============ TOPICS ============
+   To add a new topic later:
+   1. Add a new entry to the TOPICS object below (id must match a key you add
+      to ANSWER_KEYS in Code.gs).
+   2. Add its 20 [stem, [choice0..choice3]] pairs to `questions`.
+   That's it — tabs, quiz rendering, and its own live leaderboard are all automatic.
+*/
+const TOPICS = {
+
+  topic1: {
+    label: 'Topic 1',
+    title: 'Experiment, Sample Space, Events & Counting Methods',
+    questions: [
+      ["Which of the following best describes a \"sample space\"?",
+       ["The set of all possible outcomes of an experiment","A single outcome of an experiment","A numerical summary of a data set","The probability of an event"]],
+      ["In statistics, an \"experiment\" refers to:",
+       ["Any process or procedure that leads to well-defined outcomes","Only a controlled laboratory procedure","A hypothesis test","A random sample of data already collected"]],
+      ["An \"event\" is best defined as:",
+       ["A subset of the sample space","A single trial of an experiment","The complement of the sample space","A numerical function on outcomes"]],
+      ["A fair six-sided die is rolled once. The sample space is:",
+       ["{1, 2, 3, 4, 5, 6}","{1, 2, 3}","{Heads, Tails}","{0, 1}"]],
+      ["Two fair coins are flipped. How many outcomes are in the sample space?",
+       ["2","3","4","8"]],
+      ["Let A = \"rolling an even number\" on a fair six-sided die. Which set represents A?",
+       ["{1, 3, 5}","{2, 4, 6}","{1, 2, 3, 4, 5, 6}","{6}"]],
+      ["If events A and B are mutually exclusive, then:",
+       ["A ∩ B = ∅","A ∪ B = S","A = B","A ∩ B = S"]],
+      ["Two events A and B are called \"exhaustive\" (relative to sample space S) if:",
+       ["A ∪ B = S","A ∩ B = ∅","A = B′","P(A) = P(B)"]],
+      ["The complement of event A, denoted A′, consists of:",
+       ["All outcomes in A","All outcomes in S that are not in A","All outcomes in both A and B","The empty set"]],
+      ["Drawing a single card from a standard deck — how many outcomes are in the sample space?",
+       ["13","4","52","26"]],
+      ["A manufacturing process has 3 independent steps with 4, 5, and 2 choices respectively. By the multiplication rule, the total number of possible outcomes is:",
+       ["11","40","20","9"]],
+      ["How many distinct ways can 5 different textbooks be arranged in a row on a shelf?",
+       ["5","25","120","10"]],
+      ["The permutation formula for choosing and ordering r items from n distinct items is P(n,r) =",
+       ["n! / (n − r)!","n! / [r!(n − r)!]","n! / r!","r! / n!"]],
+      ["How many ways can a committee of 3 students be chosen from 10 students, if order doesn't matter?",
+       ["720","120","1000","30"]],
+      ["What distinguishes a combination from a permutation?",
+       ["A combination counts arrangements where order matters","A combination counts selections where order does not matter","A combination always equals the corresponding permutation","Combinations only apply to continuous outcomes"]],
+      ["A license plate has 3 letters followed by 4 digits, with repetition allowed. How many distinct plates are possible?",
+       ["26³ × 10⁴","26 × 10","(26 × 10)⁷","26⁴ × 10³"]],
+      ["In how many distinct ways can 4 people be seated in a row of 4 chairs?",
+       ["4","16","24","256"]],
+      ["A shop offers 3 sizes, 4 crust types, and 6 toppings, where a customer picks exactly one of each. How many distinct orders are possible?",
+       ["13","72","18","24"]],
+      ["An experiment consists of rolling two fair dice. How many outcomes are in the sample space?",
+       ["12","36","6","21"]],
+      ["Which counting method should be used to select a committee of 4 people from a group of 12, where order does not matter?",
+       ["Permutation","Combination","Multiplication rule alone","Addition rule"]]
+    ]
+  },
+
+  topic2: {
+    label: 'Topic 2',
+    title: "Probability, Conditional Probability, Independence & Bayes' Formula",
+    questions: [
+      ["For any event A, the probability P(A) always satisfies:",
+       ["P(A) can be negative","0 ≤ P(A) ≤ 1","P(A) ≥ 1","−1 ≤ P(A) ≤ 1"]],
+      ["If S is the entire sample space, then P(S) =",
+       ["0","0.5","Undefined","1"]],
+      ["Under the classical (equally likely outcomes) definition, P(A) =",
+       ["Number of outcomes in A / Number of outcomes in S","Number of outcomes in S / Number of outcomes in A","1 − (number of outcomes in A)","Number of outcomes in A, only"]],
+      ["The addition rule for two events A and B states P(A ∪ B) =",
+       ["P(A) + P(B)","P(A) × P(B)","P(A) + P(B) − P(A ∩ B)","P(A) − P(B)"]],
+      ["If A and B are mutually exclusive, then P(A ∪ B) =",
+       ["P(A) × P(B)","P(A) + P(B)","P(A) − P(B)","0"]],
+      ["The conditional probability of A given B is defined as P(A|B) =",
+       ["P(A) / P(B)","P(A ∩ B) / P(A)","P(B) / P(A)","P(A ∩ B) / P(B), provided P(B) > 0"]],
+      ["The multiplication rule states P(A ∩ B) =",
+       ["P(A) · P(B|A)","P(A) + P(B)","P(A|B) · P(B|A)","P(A) − P(B)"]],
+      ["Events A and B are independent if and only if:",
+       ["P(A ∩ B) = 0","P(A|B) = 0","P(A ∩ B) = P(A)P(B)","A ∩ B = S"]],
+      ["If A and B are independent, then P(A|B) =",
+       ["P(B)","P(A)","0","P(A)P(B)"]],
+      ["If A and B are mutually exclusive with P(A) > 0 and P(B) > 0, then A and B are:",
+       ["Always independent","Independent only if P(A) = P(B)","Independent only if S is finite","Never independent — they are necessarily dependent"]],
+      ["The Law of Total Probability partitions the sample space into events B₁,…,Bₙ. Then P(A) =",
+       ["Σ P(A|Bᵢ) P(Bᵢ)","Σ P(A) P(Bᵢ)","Σ P(Bᵢ)","P(A) / Σ P(Bᵢ)"]],
+      ["For the Law of Total Probability to apply, the events B₁,…,Bₙ must be:",
+       ["Independent only","Equally likely","Mutually exclusive and exhaustive (a partition of S)","Subsets of A"]],
+      ["Bayes' formula is used to compute:",
+       ["P(A) directly","P(Bᵢ|A), given P(A|Bᵢ) and P(Bᵢ)","P(A) − P(B)","The variance of A"]],
+      ["Bayes' Theorem states P(Bᵢ|A) =",
+       ["P(A|Bᵢ) / P(Bᵢ)","P(Bᵢ) / P(A|Bᵢ)","P(A) P(Bᵢ)","[P(A|Bᵢ) P(Bᵢ)] / P(A)"]],
+      ["A box contains 5 red balls and 3 blue balls. What is the probability of drawing a red ball on a single draw?",
+       ["5/8","3/8","5/3","1/8"]],
+      ["From the same box (5 red, 3 blue), draw two balls without replacement. What is P(2nd ball red | 1st ball red)?",
+       ["5/8","5/7","4/7","4/8"]],
+      ["A factory has two machines. Machine 1 makes 60% of items with a 2% defect rate; Machine 2 makes 40% with a 5% defect rate. Using the total probability formula, the overall probability an item is defective is:",
+       ["0.02 + 0.05","0.6(0.02) + 0.4(0.05) = 0.032","0.6 × 0.4","0.02 × 0.05"]],
+      ["Using the factory example above, if an item is found defective, which formula finds the probability it came from Machine 1?",
+       ["Addition rule","Multiplication rule for independent events only","Complement rule","Bayes' formula"]],
+      ["If P(A) = 0.3, P(B) = 0.4, and A and B are independent, then P(A ∩ B) =",
+       ["0.12","0.7","0.1","0.3"]],
+      ["If P(A) = 0.5, P(B) = 0.3, and P(A ∩ B) = 0.15, are A and B independent?",
+       ["No","Cannot be determined from this information","Yes, since P(A)P(B) = P(A ∩ B)","Only if they are also mutually exclusive"]]
+    ]
+  },
+
+  topic3: {
+    label: 'Topic 3',
+    title: 'Discrete Random Variables: pmf, Mean, SD, Binomial, Geometric & Poisson',
+    questions: [
+      ["A discrete random variable X is characterized by:",
+       ["Its cumulative distribution being differentiable everywhere","A continuous density function","A pmf assigning probabilities to each possible value, with probabilities summing to 1","Only its mean"]],
+      ["For a valid probability mass function (pmf) p(x), which condition must hold?",
+       ["0 ≤ p(x) ≤ 1 for all x, and Σ p(x) = 1","p(x) can be any real number","p(x) ≥ 1 for all x","Σ p(x) = 0"]],
+      ["The mean (expected value) of a discrete random variable X is computed as:",
+       ["Σ p(x)","Σ x","Σ (x − μ)","Σ x·p(x)"]],
+      ["The variance of a discrete random variable X is defined as:",
+       ["E[X]","E[(X − μ)²] = Σ (x − μ)² p(x)","Σ x p(x)","Σ (x − μ)"]],
+      ["The standard deviation of X is:",
+       ["The same as the mean","The square of the variance","The square root of the variance","Always equal to 1"]],
+      ["A binomial random variable models:",
+       ["The number of successes in n independent trials, each with the same success probability p","The number of trials until the first success","The number of events in a fixed interval of time","A continuous outcome bounded between 0 and 1"]],
+      ["For X ~ Binomial(n, p), the pmf is:",
+       ["pˣ(1 − p)ⁿ⁻ˣ","C(n,x) pˣ","np(1 − p)","C(n,x) pˣ (1 − p)ⁿ⁻ˣ"]],
+      ["For X ~ Binomial(n, p), the mean is:",
+       ["np(1 − p)","np","n/p","p/n"]],
+      ["For X ~ Binomial(n, p), the variance is:",
+       ["np","n(1 − p)","np(1 − p)","p(1 − p)"]],
+      ["Which of the following is a required condition for a binomial experiment?",
+       ["Trials are independent, each with the same constant probability of success","The probability of success changes each trial","The number of trials is infinite","Outcomes are continuous"]],
+      ["A geometric random variable models:",
+       ["The number of successes in n trials","The number of events in a fixed time interval","The sum of n independent normal variables","The number of trials needed to get the first success in a sequence of independent Bernoulli trials"]],
+      ["For X ~ Geometric(p), where X is the trial number of the first success, the pmf is:",
+       ["pˣ(1 − p)","(1 − p)ˣ⁻¹ p, for x = 1, 2, 3, …","C(x,1) p","p(1 − p)"]],
+      ["For X ~ Geometric(p), the mean is:",
+       ["p","(1 − p)/p²","1/p","1/(1 − p)"]],
+      ["For X ~ Geometric(p), the variance is:",
+       ["(1 − p)/p²","1/p","p(1 − p)","1/p²"]],
+      ["A Poisson random variable is typically used to model:",
+       ["The number of trials until success","The proportion of successes in a sample","A bounded discrete outcome between 0 and n","The number of rare events occurring in a fixed interval of time or space"]],
+      ["For X ~ Poisson(λ), the pmf is:",
+       ["λˣ / x!","e^(−λ) λˣ / x!, for x = 0, 1, 2, …","e^(−λ)/λ","λ e^(−λx)"]],
+      ["For X ~ Poisson(λ), the mean and the variance are both equal to:",
+       ["λ²","√λ","λ","1/λ"]],
+      ["A call center receives an average of 4 calls per minute, and calls arrive independently. Which distribution best models the number of calls in a given minute?",
+       ["Poisson(λ = 4)","Binomial(n = 4, p unknown)","Geometric(p = 4)","Uniform(0, 4)"]],
+      ["A basketball player makes free throws independently with probability 0.7 each. Let X = number made out of 10 attempts. What distribution does X follow, and what is E[X]?",
+       ["Geometric(0.7); E[X] = 1/0.7","Poisson(0.7); E[X] = 0.7","Binomial(10, 0.3); E[X] = 3","Binomial(10, 0.7); E[X] = 7"]],
+      ["Using the same shooter (p = 0.7 success per attempt, independent), let Y = number of attempts until the first miss. Which distribution and parameter models Y?",
+       ["Binomial with p = 0.7","Geometric with success probability 0.3 (treating a \"miss\" as the success)","Poisson with λ = 0.7","Geometric with success probability 0.7"]]
+    ]
+  },
+
+  topic4: {
+    label: 'Topic 4',
+    title: 'Continuous Random Variables: Mean, SD, Uniform, Normal & Exponential',
+    questions: [
+      ["A continuous random variable X differs from a discrete one in that:",
+       ["X can only take integer values","X has a pmf that sums to 1","P(X = x) is always positive for every x","X can take any value in an interval, and probabilities are found by integrating a density function"]],
+      ["For a valid probability density function (pdf) f(x), which condition must hold?",
+       ["f(x) ≤ 1 for all x","f(x) ≥ 0 for all x, and the total area under f(x) equals 1","f(x) must be symmetric","f(x) sums to 1 over discrete values"]],
+      ["For a continuous random variable X, P(X = c) for any single point c is:",
+       ["1","f(c)","0","Undefined"]],
+      ["For continuous X with pdf f(x), the mean is computed as:",
+       ["∫ x f(x) dx over the support of X","∫ f(x) dx","Σ x f(x)","∫ (x − μ) dx"]],
+      ["The variance of a continuous random variable X is:",
+       ["∫ x f(x) dx","E[X]","∫ f(x) dx","E[(X − μ)²] = ∫ (x − μ)² f(x) dx"]],
+      ["The standard deviation of X is:",
+       ["The square of the variance","The square root of the variance","Always equal to the mean","The integral of f(x)"]],
+      ["If X ~ Uniform(a, b), the pdf f(x) is:",
+       ["1/b for a ≤ x ≤ b","(b − a) for a ≤ x ≤ b","1/(b − a) for a ≤ x ≤ b, and 0 otherwise","x/(b − a)"]],
+      ["For X ~ Uniform(a, b), the mean is:",
+       ["(a + b)/2","(b − a)/2","(b − a)²/12","a + b"]],
+      ["For X ~ Uniform(a, b), the variance is:",
+       ["(a + b)/2","(b − a)/2","(b − a)²/4","(b − a)²/12"]],
+      ["The normal distribution's pdf is characterized by parameters:",
+       ["Only λ","Mean μ and standard deviation σ","a and b (lower and upper bounds)","Only the variance"]],
+      ["The standard normal distribution is a normal distribution with:",
+       ["μ = 1 and σ = 0","μ = σ","μ = 0 and σ = 1","μ and σ unspecified"]],
+      ["To convert a normal random variable X ~ N(μ, σ²) to the standard normal Z, you compute:",
+       ["Z = (X − μ)/σ","Z = X − μ","Z = X/σ","Z = (X − σ)/μ"]],
+      ["The normal distribution's density curve is:",
+       ["Skewed to the right","Skewed to the left","Flat (uniform)","Symmetric and bell-shaped around the mean"]],
+      ["The exponential distribution is often used to model:",
+       ["The number of successes in n trials","The waiting time until the next event in a Poisson process","A bounded outcome between a and b","A symmetric bell-shaped variable"]],
+      ["For X ~ Exponential(λ), the pdf is:",
+       ["e^(−λx) for x ≥ 0","λˣ e^(−λ)/x!","λe^(−λx) for x ≥ 0, and 0 otherwise","1/λ for x ≥ 0"]],
+      ["For X ~ Exponential(λ), the mean is:",
+       ["1/λ","λ","λ²","1/λ²"]],
+      ["For X ~ Exponential(λ), the variance is:",
+       ["1/λ","λ","λ²","1/λ²"]],
+      ["The exponential distribution has the \"memoryless\" property, meaning:",
+       ["The mean changes over time","P(X > s+t | X > s) = P(X > t) — the remaining waiting time doesn't depend on how long you've already waited","The variance decreases as x increases","P(X > t) increases with t"]],
+      ["Bus arrival times at a stop follow a Poisson process with rate λ = 2 buses per hour. The time between consecutive bus arrivals is best modeled by:",
+       ["Normal(μ = 2, σ = 1)","Uniform(0, 2)","Exponential(λ = 2)","Poisson(λ = 2)"]],
+      ["Adult male heights are approximately N(70, 3²) inches. Which approach finds P(X > 73)?",
+       ["Normal distribution; standardize to Z = (73 − 70)/3 = 1, then use the standard normal table","Uniform distribution; (73 − 70)/(max − min)","Exponential distribution; 1 − e^(−73/70)","Binomial distribution; C(73,70)(0.5)⁷³"]]
+    ]
+  },
+
+  topic5: {
+    label: 'Topic 5',
+    title: 'Joint Distributions, Covariance & Correlation',
+    questions: [
+      ["The joint pmf of two discrete random variables X and Y, p(x,y), gives:",
+       ["The probability that X = x and Y = y simultaneously","The probability that X = x or Y = y","The marginal probability of X alone","The conditional probability of X given Y"]],
+      ["For a valid joint pmf p(x,y), it must satisfy:",
+       ["p(x,y) can be negative","Σ Σ p(x,y) = 0","p(x,y) ≥ 0 for all x,y, and Σ Σ p(x,y) = 1","p(x,y) ≥ 1 for all x,y"]],
+      ["The marginal pmf of X, pₓ(x), is obtained from the joint pmf by:",
+       ["Taking the maximum over y","Summing p(x,y) over all values of y","Multiplying p(x,y) by p(y)","Dividing p(x,y) by p(y)"]],
+      ["The conditional pmf of Y given X = x is defined as:",
+       ["p(x,y) × pₓ(x)","pₓ(x) / p(x,y)","p(x,y) + pₓ(x)","p(y|x) = p(x,y) / pₓ(x), provided pₓ(x) > 0"]],
+      ["Two random variables X and Y are independent if and only if:",
+       ["p(x,y) = pₓ(x) · p_Y(y) for all x, y","p(x,y) = pₓ(x) + p_Y(y)","Cov(X,Y) = 1","p(x,y) = 0 for all x, y"]],
+      ["For jointly distributed X and Y, E[XY] is computed as:",
+       ["Σ x pₓ(x) + Σ y p_Y(y)","E[X] + E[Y]","Σ Σ xy p(x,y)","E[X] − E[Y]"]],
+      ["The covariance between X and Y is defined as:",
+       ["E[X] + E[Y]","Cov(X,Y) = E[(X − μₓ)(Y − μ_Y)] = E[XY] − E[X]E[Y]","Var(X) + Var(Y)","E[X]E[Y]"]],
+      ["If X and Y are independent, then Cov(X,Y) =",
+       ["1","Var(X)Var(Y)","Undefined","0"]],
+      ["Cov(X,Y) = 0 implies that X and Y are:",
+       ["Uncorrelated, but not necessarily independent","Always independent","Always identical","Always mutually exclusive"]],
+      ["If Cov(X,Y) > 0, this suggests that:",
+       ["X and Y are unrelated","As X increases, Y tends to decrease","X and Y tend to increase or decrease together","X causes Y directly"]],
+      ["The correlation coefficient ρ(X,Y) is defined as:",
+       ["Cov(X,Y) × σₓ σ_Y","Cov(X,Y) / (σₓ σ_Y)","σₓ / σ_Y","Cov(X,Y) / Var(X)"]],
+      ["The correlation coefficient ρ(X,Y) always satisfies:",
+       ["0 ≤ ρ(X,Y) ≤ 1","ρ(X,Y) ≥ 1","ρ(X,Y) can be any real number","−1 ≤ ρ(X,Y) ≤ 1"]],
+      ["If ρ(X,Y) = 1, this indicates:",
+       ["A perfect positive linear relationship between X and Y","X and Y are independent","A perfect negative linear relationship","No relationship at all"]],
+      ["If ρ(X,Y) = 0, this means:",
+       ["X and Y are always independent","Var(X) = 0","There is no linear relationship between X and Y (a nonlinear relationship may still exist)","Cov(X,Y) is negative"]],
+      ["For random variables X and Y and constants a, b, the variance of the sum aX + bY is:",
+       ["aVar(X) + bVar(Y)","a²Var(X) + b²Var(Y) + 2ab Cov(X,Y)","a²Var(X) + b²Var(Y)","Var(X) + Var(Y)"]],
+      ["If X and Y are independent, then Var(X + Y) =",
+       ["Var(X) − Var(Y)","Var(X) × Var(Y)","Var(X) + Var(Y) + 2Cov(X,Y)","Var(X) + Var(Y)"]],
+      ["An engineer measures temperature (X) and pressure (Y) readings and finds Cov(X,Y) = 15, σₓ = 5, σ_Y = 3. The correlation coefficient is:",
+       ["15/(5×3) = 1","15/(5+3)","15 × 5 × 3","15/5 − 15/3"]],
+      ["Two components' lifetimes X and Y have Var(X) = 4, Var(Y) = 9, and Cov(X,Y) = 2. What is Var(X + Y)?",
+       ["4 + 9 = 13","4 × 9 = 36","4 + 9 + 2(2) = 17","4 − 9 + 2(2) = −1"]],
+      ["A scatterplot shows a strong linear pattern where one variable increases as the other decreases. We would expect:",
+       ["A correlation coefficient close to 0","A correlation coefficient close to −1","A correlation coefficient close to +1","A covariance that cannot be computed"]],
+      ["Which of the following is true about covariance and correlation?",
+       ["Covariance and correlation always have the same numeric value","Correlation depends on the units of measurement while covariance does not","Covariance is always between −1 and 1","Correlation is a standardized (unit-free) version of covariance"]]
+    ]
+  },
+
+  topic6: {
+    label: 'Topic 6',
+    title: 'Population & Sample, Descriptive Statistics & Charts',
+    questions: [
+      ["A \"population\" in statistics refers to:",
+       ["A small subset used for analysis","The entire set of individuals or items of interest","Only the numerical summary of data","A graph summarizing data"]],
+      ["A \"sample\" is best described as:",
+       ["The entire group of interest","A fixed numerical characteristic of a population","A type of graph","A subset of the population selected for study"]],
+      ["A \"parameter\" is:",
+       ["A numerical characteristic computed from a sample","A type of chart","A numerical characteristic that describes a population","Always equal to the sample mean"]],
+      ["A \"statistic\" is:",
+       ["A numerical characteristic computed from sample data, used to estimate a parameter","A fixed characteristic of the population","Always unknown and unobservable","A synonym for parameter"]],
+      ["The sample mean x̄ is computed as:",
+       ["The middle value when data are ordered","The sum of all observations divided by the sample size n","The most frequently occurring value","The largest value minus the smallest"]],
+      ["The median of a data set is:",
+       ["The average of all values","The most frequent value","The range of the data","The middle value when the data are arranged in order (or the average of the two middle values for even n)"]],
+      ["The mode of a data set is:",
+       ["The middle value","The average value","The value that occurs most frequently","The spread of the data"]],
+      ["The sample variance s² is typically computed using which denominator?",
+       ["n − 1","n","n + 1","n²"]],
+      ["The sample standard deviation is:",
+       ["The square of the sample variance","The square root of the sample variance","The same as the mean","Always equal to 1"]],
+      ["The p-th percentile of a data set is the value below which approximately:",
+       ["p values fall","(100 − p)% of the data fall","Half the data fall, regardless of p","p% of the data fall"]],
+      ["The interquartile range (IQR) is calculated as:",
+       ["Q1 − Q3","Q3 + Q1","Q3 − Q1","Q2 − Q1"]],
+      ["The sample correlation coefficient r measures:",
+       ["The strength and direction of the linear relationship between two quantitative variables in sample data","The causal effect of one variable on another","The spread of a single variable","The average of two variables"]],
+      ["A frequency distribution summarizes data by:",
+       ["Listing only the mean and median","Showing how often each value or range of values occurs","Ranking observations from largest to smallest only","Showing the relationship between two variables"]],
+      ["A bar chart is most appropriate for displaying:",
+       ["The relationship between two continuous variables","The five-number summary of a data set","Continuous data grouped into bins","Categorical data, with bar heights representing counts or frequencies"]],
+      ["A pie chart is typically used to show:",
+       ["The trend in data over time","The spread and outliers in continuous data","The relative proportions (parts of a whole) of categories in a data set","The correlation between two variables"]],
+      ["A histogram differs from a bar chart in that a histogram:",
+       ["Displays continuous/quantitative data grouped into contiguous bins (intervals)","Is used only for categorical data","Always has gaps between bars","Shows only the mean and median"]],
+      ["A boxplot (box-and-whisker plot) is built from which summary?",
+       ["The mean and standard deviation only","The five-number summary: minimum, Q1, median, Q3, maximum","The mode and range only","The correlation coefficient"]],
+      ["In a boxplot, a common rule for flagging outliers is a point that falls:",
+       ["More than 1 standard deviation from the mean","Outside the minimum and maximum","More than 3×IQR from the median","More than 1.5×IQR below Q1 or above Q3"]],
+      ["The Pearson correlation coefficient r always satisfies:",
+       ["0 ≤ r ≤ 1","r ≥ 1","−1 ≤ r ≤ 1","r can be any real number"]],
+      ["A scatterplot is used to:",
+       ["Visually display the relationship between two quantitative variables","Show the frequency of a single categorical variable","Display the five-number summary","Show proportions of a whole"]]
+    ]
+  },
+
+  topic7: {
+    label: 'Topic 7',
+    title: 'Sampling Distribution, Bias & Standard Error',
+    questions: [
+      ["A \"sampling distribution\" refers to:",
+       ["The distribution of a single sample's raw data","The distribution of the entire population","The probability distribution of a statistic (e.g., the sample mean) computed from all possible samples of a given size from a population","A graph of the sample mean over time"]],
+      ["The sampling distribution of the sample mean X̄ has a mean equal to:",
+       ["The population mean μ","The sample size n","The population standard deviation σ","Zero, always"]],
+      ["The standard error of the sample mean is defined as:",
+       ["The population standard deviation σ","The sample standard deviation s","The variance of a single observation","The standard deviation of the sampling distribution of the sample mean, SE = σ/√n"]],
+      ["As the sample size n increases, the standard error of the sample mean:",
+       ["Increases","Decreases","Stays exactly the same","Becomes undefined"]],
+      ["The Central Limit Theorem states that, for a sufficiently large sample size n:",
+       ["The population distribution becomes normal","The sample size must always exceed 1000","The sampling distribution of the sample mean is approximately normal, regardless of the shape of the population distribution","The standard error becomes zero"]],
+      ["An estimator is called \"unbiased\" if:",
+       ["Its expected value equals the true value of the parameter it estimates","It always produces the correct value from every single sample","Its variance is zero","It is calculated from the entire population"]],
+      ["The \"bias\" of an estimator is defined as:",
+       ["The standard error of the estimator","The variance of the estimator","Always a positive number","The difference between the expected value of the estimator and the true parameter value"]],
+      ["The sample mean X̄ is an unbiased estimator of the population mean μ because:",
+       ["X̄ always equals μ exactly","E[X̄] = μ","X̄ has the smallest possible variance","X̄ is always larger than μ"]],
+      ["Which of the following formulas uses n − 1 (rather than n) in the denominator specifically to make it an unbiased estimator of the population variance σ²?",
+       ["The sample mean x̄","The standard error","The sample variance s²","The population variance σ²"]],
+      ["A \"consistent\" estimator is one for which:",
+       ["As the sample size increases, the estimator converges (in probability) to the true parameter value","The estimator is always unbiased","The sample size must be fixed at 30","The variance always increases with n"]],
+      ["If a survey consistently oversamples one demographic group relative to the population, the resulting sample mean is likely to be:",
+       ["Unbiased but inconsistent","An exact match to the population mean","Unaffected by the sampling method","Biased"]],
+      ["The standard error of the sample proportion p̂ is calculated as:",
+       ["p(1 − p)/n","√[p(1 − p)/n]","p/n","√(p/n)"]],
+      ["A sample of size n = 25 has SE = 4. If the sample size increases to n = 100 (all else equal), the new standard error is approximately:",
+       ["8","4","2 (SE is proportional to 1/√n, so it's halved when n quadruples)","1"]],
+      ["Which of the following best distinguishes \"bias\" from \"variability\" (standard error) of an estimator?",
+       ["Bias measures systematic error (whether the estimator is off-target on average), while standard error measures the spread of the estimator's values across samples","Bias and standard error are the same concept","Standard error measures systematic error and bias measures spread","Bias only applies to means, standard error only applies to proportions"]],
+      ["An estimator can be unbiased yet still have:",
+       ["Zero variance in all cases","A value that is always wrong","No sampling distribution","High variability (a large standard error) across different samples"]],
+      ["According to the Central Limit Theorem, if individual observations come from a strongly skewed population, the sampling distribution of X̄ for large n will be:",
+       ["Just as skewed as the population","Approximately normal, even though the population itself is skewed","Undefined","Uniform"]],
+      ["Increasing the sample size n primarily affects which property of the sampling distribution of X̄?",
+       ["It changes the mean of the sampling distribution","It has no effect on the sampling distribution","It decreases the spread (standard error), while the mean of the sampling distribution stays at μ","It makes the estimator biased"]],
+      ["A thermometer that consistently reads 2 degrees too high on every measurement, regardless of sample size, illustrates:",
+       ["Bias, not variability","A large standard error","An unbiased estimator","The Central Limit Theorem"]],
+      ["If you take repeated samples of size n from a population and compute the sample mean each time, the collection of all those sample means forms:",
+       ["A single population parameter","A biased estimator by definition","The standard error directly","The sampling distribution of the sample mean"]],
+      ["Why is standard error important when estimating a population parameter from sample data?",
+       ["It tells you whether the estimator is unbiased","It quantifies how much the sample statistic is expected to vary from sample to sample, which affects the precision of the estimate","It is only relevant for categorical data","It replaces the need for a sampling distribution"]]
+    ]
+  },
+
+  topic8: {
+    label: 'Topic 8',
+    title: 'Confidence Interval & Hypothesis Testing for a Single Proportion',
+    questions: [
+      ["The point estimate for a population proportion p is:",
+       ["The population proportion itself","The sample size n","The margin of error","p̂ = x/n, the sample proportion of successes"]],
+      ["For the normal approximation to be valid when constructing a confidence interval for a proportion, a common rule of thumb requires:",
+       ["np̂ ≥ 10 and n(1 − p̂) ≥ 10","n ≥ 30 only","p̂ = 0.5 exactly","The population must be normally distributed"]],
+      ["The formula for a confidence interval for a single population proportion is:",
+       ["p̂ ± z*·σ","p̂ ± z* √[p̂(1 − p̂)/n]","p̂ ± t*·s/√n","p̂ ± z*·n"]],
+      ["The margin of error in a confidence interval for a proportion is:",
+       ["p̂(1 − p̂)/n","z*·p̂","z* √[p̂(1 − p̂)/n]","The sample size n"]],
+      ["A 95% confidence interval for a proportion means:",
+       ["There is a 95% probability the true proportion is exactly p̂","95% of the sample data falls within the interval","The true proportion is definitely inside this particular interval","If we repeated the sampling process many times, about 95% of the resulting intervals would contain the true population proportion"]],
+      ["The critical value z* for a 95% confidence interval is approximately:",
+       ["1.96","1.645","2.576","1.28"]],
+      ["As the confidence level increases (e.g., from 90% to 99%), the margin of error:",
+       ["Decreases","Increases, since a higher confidence level requires a larger critical value z*","Stays exactly the same","Becomes zero"]],
+      ["To achieve a smaller margin of error for a proportion (holding confidence level fixed), you should:",
+       ["Decrease the sample size n","Decrease the confidence level","Increase the sample size n","Use a smaller z*"]],
+      ["The null hypothesis for a one-proportion test is typically written as:",
+       ["H₀: p̂ = p","H₀: p ≠ p₀","H₀: n = 30","H₀: p = p₀, where p₀ is the hypothesized value"]],
+      ["The test statistic for a hypothesis test about a single proportion is calculated as:",
+       ["z = (p̂ − p₀) / √[p₀(1 − p₀)/n]","z = (p̂ − p₀) / √[p̂(1 − p̂)/n]","z = p̂ / p₀","z = (p̂ − p₀) × n"]],
+      ["A key difference between the standard error formula used in a confidence interval versus a hypothesis test for a proportion is:",
+       ["There is no difference; both always use p̂","The CI uses p̂ (the sample proportion) in the standard error, while the hypothesis test uses p₀ (the hypothesized value)","The CI uses n while the test uses p̂","The hypothesis test never requires a standard error"]],
+      ["A two-tailed alternative hypothesis for a proportion test is written as:",
+       ["Hₐ: p > p₀","Hₐ: p < p₀","Hₐ: p ≠ p₀","Hₐ: p = p₀"]],
+      ["The p-value in a hypothesis test represents:",
+       ["The probability that the null hypothesis is true","The probability that the alternative hypothesis is true","The same thing as the significance level α","The probability of observing a test statistic as extreme or more extreme than the one calculated, assuming the null hypothesis is true"]],
+      ["If the p-value is less than the significance level α, the correct decision is to:",
+       ["Reject the null hypothesis","Fail to reject the null hypothesis","Accept the alternative hypothesis as proven true","Increase the sample size"]],
+      ["A Type I error in hypothesis testing occurs when:",
+       ["The null hypothesis is not rejected when it is actually false","The null hypothesis is rejected when it is actually true","The sample size is too small","The confidence interval is too wide"]],
+      ["A Type II error in hypothesis testing occurs when:",
+       ["The null hypothesis is rejected when it is actually true","The significance level is set too high","The null hypothesis is not rejected when it is actually false","The p-value is calculated incorrectly"]],
+      ["The significance level α represents:",
+       ["The probability of making a Type II error","The same as the p-value","The confidence level of the corresponding interval only","The probability of making a Type I error, chosen by the researcher before conducting the test"]],
+      ["A two-sided 95% confidence interval for a proportion and a two-tailed hypothesis test at α = 0.05 are related in that:",
+       ["If the hypothesized value p₀ falls outside the 95% confidence interval, the test would reject H₀: p = p₀ at α = 0.05","They always give contradictory conclusions","The confidence interval determines the sample size for the test","They are unrelated procedures"]],
+      ["A survey of 400 randomly selected voters finds 220 in favor of a proposal. The sample proportion p̂ is:",
+       ["400/220","220/400 = 0.55","220 − 400","0.40"]],
+      ["A manufacturer claims 95% of its parts meet spec (p₀ = 0.95). In a sample of 200 parts, 180 meet spec (p̂ = 0.90). To test whether the true proportion is less than claimed, the correct hypotheses are:",
+       ["H₀: p = 0.90 vs. Hₐ: p ≠ 0.90","H₀: p = 0.95 vs. Hₐ: p > 0.95","H₀: p = 0.95 vs. Hₐ: p < 0.95 (a one-tailed test)","H₀: p̂ = 0.95 vs. Hₐ: p̂ ≠ 0.95"]]
+    ]
+  },
+
+  topic9: {
+    label: 'Topic 9',
+    title: 'CI & Hypothesis Testing for the Difference Between Two Proportions',
+    questions: [
+      ["The point estimate for the difference between two population proportions p1 − p2 is:",
+       ["p̂1 + p̂2","p̂1 − p̂2","p̂1 / p̂2","n1 − n2"]],
+      ["For the normal approximation to apply to a confidence interval for p1 − p2, the rule of thumb requires:",
+       ["n1 = n2 exactly","p̂1 = p̂2","n1p̂1, n1(1 − p̂1), n2p̂2, and n2(1 − p̂2) are all at least 10","Only n1p̂1 ≥ 10"]],
+      ["The confidence interval for p1 − p2 is calculated as:",
+       ["(p̂1 − p̂2) ± z* √[p̂1(1 − p̂1)/n1 + p̂2(1 − p̂2)/n2]","(p̂1 − p̂2) ± z* √[p̂(1 − p̂)(1/n1 + 1/n2)]","(p̂1 − p̂2) ± z*·(n1 + n2)","(p̂1 − p̂2) ± t*·s"]],
+      ["In constructing the confidence interval for p1 − p2, the standard error uses:",
+       ["A single pooled proportion","Only the larger of the two sample sizes","The population proportions, assumed known","The two sample proportions p̂1 and p̂2 separately, each with its own sample size"]],
+      ["The null hypothesis for testing whether two population proportions are equal is typically written as:",
+       ["H₀: p̂1 = p̂2","H₀: p1 = p2 (equivalently, p1 − p2 = 0)","H₀: p1 ≠ p2","H₀: n1 = n2"]],
+      ["When testing H₀: p1 = p2, the \"pooled proportion\" p̂ is calculated as:",
+       ["(p̂1 + p̂2) / 2","p̂1 × p̂2","(x1 + x2) / (n1 + n2), combining successes from both samples","p̂1 − p̂2"]],
+      ["The pooled proportion is used in the hypothesis test (but not the confidence interval) because:",
+       ["Under H₀, p1 and p2 are assumed equal, so combining the samples gives a better single estimate of that common proportion","It always makes the standard error smaller","The confidence interval doesn't require any assumption about p1 and p2","Pooling only works when n1 = n2"]],
+      ["The test statistic for comparing two population proportions (under H₀: p1 = p2) is:",
+       ["z = (p̂1 − p̂2) / (n1 + n2)","z = p̂1 / p̂2","z = (p̂1 − p̂2) × √(n1 n2)","z = (p̂1 − p̂2) / √[p̂(1 − p̂)(1/n1 + 1/n2)], using the pooled p̂"]],
+      ["A two-tailed alternative hypothesis for comparing two proportions is written as:",
+       ["Hₐ: p1 > p2","Hₐ: p1 ≠ p2","Hₐ: p1 < p2","Hₐ: p1 = p2"]],
+      ["If a 95% confidence interval for p1 − p2 does not contain 0, this suggests:",
+       ["The two proportions are definitely equal","The sample sizes were too small","There is a statistically significant difference between the two population proportions at the corresponding significance level","No conclusion can be drawn"]],
+      ["If a 95% confidence interval for p1 − p2 is entirely positive (e.g., 0.05 to 0.20), this suggests:",
+       ["p1 is likely greater than p2","p1 is likely less than p2","p1 and p2 are equal","The interval is invalid"]],
+      ["Which of these correctly describes the relationship between the confidence interval for p1 − p2 and a two-tailed test of H₀: p1 = p2 at the same significance level?",
+       ["They are unrelated methods with no connection","The confidence interval always uses the pooled proportion, unlike the test","The test result determines the width of the confidence interval","If 0 falls outside the confidence interval, the test would reject H₀ at the corresponding α"]],
+      ["Which condition would make it inappropriate to use the normal approximation for a two-proportion test?",
+       ["The sample sizes are exactly equal","One of the samples has n·p̂ or n(1 − p̂) less than about 10","The significance level is set to 0.05","The two sample proportions happen to be equal"]],
+      ["A company tests whether the click-through rate differs between two website designs (A and B) by randomly assigning visitors to each. This is an example of:",
+       ["A one-proportion test","A test comparing means, not proportions","A two-proportion hypothesis test (an A/B test) comparing p_A and p_B","A chi-square goodness-of-fit test"]],
+      ["Design A had 40 conversions out of 500 visitors; Design B had 60 conversions out of 500 visitors. The sample proportions are:",
+       ["p̂_A = 40/500 = 0.08 and p̂_B = 60/500 = 0.12","p̂_A = 500/40 and p̂_B = 500/60","p̂_A = 0.12 and p̂_B = 0.08","p̂_A = 40 and p̂_B = 60"]],
+      ["Using the Design A/B data above (40/500 and 60/500), the pooled proportion p̂ is:",
+       ["(40 + 60)/500 = 0.20 (forgetting to add both sample sizes)","40/60 ≈ 0.67","0.08 × 0.12 = 0.0096","(40 + 60)/(500 + 500) = 100/1000 = 0.10"]],
+      ["If the test comparing Design A and B yields a p-value of 0.03 at α = 0.05, the correct conclusion is:",
+       ["Fail to reject H₀ — no significant difference","Reject H₀ — there is a statistically significant difference between the conversion rates","The difference is definitely due to random chance","The test is inconclusive regardless of the p-value"]],
+      ["In a two-proportion test, increasing both sample sizes (while p̂1 and p̂2 stay the same) generally:",
+       ["Increases the standard error","Has no effect on the standard error","Decreases the standard error, making it easier to detect a true difference (increases power)","Makes the test invalid"]],
+      ["Which scenario is appropriately analyzed using a two-proportion confidence interval or test?",
+       ["Comparing the proportion of defective items produced by Machine 1 versus Machine 2","Estimating the average weight of items produced by a single machine","Comparing the correlation between two continuous variables","Estimating the variance of a single population"]],
+      ["When the confidence interval for p1 − p2 straddles zero (e.g., −0.03 to 0.08), the appropriate conclusion is:",
+       ["The two proportions are definitely equal","p1 is definitely greater than p2","The sample sizes must be increased before any conclusion is possible","There is not enough evidence to conclude the two population proportions differ"]]
+    ]
+  },
+
+  topic10: {
+    label: 'Topic 10',
+    title: 'CI & Hypothesis Testing for a Single Population Mean',
+    questions: [
+      ["When constructing a confidence interval for a population mean and the population standard deviation σ is unknown (the typical case), the correct distribution to use is:",
+       ["The t-distribution, using the sample standard deviation s","The standard normal (z) distribution, using s in place of σ","The binomial distribution","The chi-square distribution"]],
+      ["The degrees of freedom for a one-sample t-procedure with sample size n is:",
+       ["n","n + 1","n/2","n − 1"]],
+      ["Compared to the standard normal distribution, the t-distribution has:",
+       ["Lighter tails","Heavier tails, reflecting the extra uncertainty from estimating σ with s","The exact same shape, always","No defined mean"]],
+      ["As the degrees of freedom increase, the t-distribution:",
+       ["Becomes more skewed","Develops heavier tails","Approaches the standard normal distribution","Becomes a uniform distribution"]],
+      ["The confidence interval for a single population mean (σ unknown) is calculated as:",
+       ["x̄ ± t* (s/√n)","x̄ ± z* (σ/√n)","x̄ ± t*·s","μ ± t* (s/√n)"]],
+      ["One condition for the validity of the t-procedure for a mean is:",
+       ["The population standard deviation σ must be known","The sample size must be exactly 30","The data must be categorical","The population is approximately normal, or the sample size is large enough for the Central Limit Theorem to apply"]],
+      ["The margin of error for a confidence interval for a single mean is:",
+       ["s/√n","t* (s/√n)","t*·n","z*·σ"]],
+      ["As the sample size n increases (holding s and confidence level fixed), the margin of error for a mean:",
+       ["Increases","Stays exactly the same","Decreases","Becomes undefined"]],
+      ["The null hypothesis for a one-sample t-test about a population mean is typically written as:",
+       ["H₀: μ = μ₀, where μ₀ is the hypothesized value","H₀: x̄ = μ","H₀: μ ≠ μ₀","H₀: s = σ"]],
+      ["The test statistic for a one-sample t-test about a mean is calculated as:",
+       ["t = (x̄ − μ₀) / σ","t = x̄ / μ₀","t = (x̄ − μ₀) × n","t = (x̄ − μ₀) / (s/√n)"]],
+      ["A two-tailed alternative hypothesis for a one-sample mean test is written as:",
+       ["Hₐ: μ > μ₀","Hₐ: μ ≠ μ₀","Hₐ: μ < μ₀","Hₐ: μ = μ₀"]],
+      ["If the p-value from a one-sample t-test is greater than the significance level α, the correct decision is to:",
+       ["Reject the null hypothesis","Reject the alternative hypothesis","Fail to reject the null hypothesis","Increase α until the p-value becomes significant"]],
+      ["A quality engineer wants to test whether the mean diameter of manufactured bolts differs from the target of 10mm, using a sample of 25 bolts with unknown population σ. The appropriate test is:",
+       ["A one-sample t-test with 24 degrees of freedom","A one-sample z-test, since n is small","A two-proportion test","A one-sample t-test with 25 degrees of freedom"]],
+      ["If σ (the population standard deviation) happens to be known, the appropriate procedure for a confidence interval or test about a single mean is:",
+       ["Always a t-procedure regardless of whether σ is known","Neither a t- nor z-procedure applies","A chi-square procedure","A z-procedure, using σ directly"]],
+      ["A sample of 16 measurements has x̄ = 50, s = 8. For a 95% confidence interval with 15 degrees of freedom, t* ≈ 2.131. The margin of error is approximately:",
+       ["2.131 × 8 = 17.05","2.131 × (8/√16) = 2.131 × 2 = 4.26","2.131 × 16 = 34.10","8/16 = 0.5"]],
+      ["Using the sample above (x̄ = 50, margin of error ≈ 4.26), the 95% confidence interval for the population mean is approximately:",
+       ["(50, 54.26)","(45.74, 50)","(45.74, 54.26)","(41.48, 58.52)"]],
+      ["If a 95% confidence interval for a population mean is (48, 55), and a researcher tests H₀: μ = 50 vs. Hₐ: μ ≠ 50 at α = 0.05, the correct conclusion is:",
+       ["Fail to reject H₀, since 50 falls inside the confidence interval","Reject H₀, since 50 falls inside the confidence interval","The test cannot be performed using this interval","Reject H₀ because the interval does not contain 0"]],
+      ["A one-sample t-test for a mean assumes the observations are:",
+       ["Always exactly normally distributed, with no exceptions","Paired with a second sample","Measured on a categorical scale","A random sample, with observations that are independent of one another"]],
+      ["Increasing the confidence level from 90% to 99% (holding sample size fixed) will make the confidence interval for a mean:",
+       ["Narrower","Wider, because a larger t* is needed to be more confident of capturing the true mean","Exactly the same width","Centered at a different value"]],
+      ["A researcher reports t = 2.5, df = 20, and a two-tailed p-value of 0.021 for a test of H₀: μ = 100. At α = 0.05, the correct conclusion is:",
+       ["Fail to reject H₀ — no significant evidence of a difference","The sample size is too small to draw a conclusion","Reject H₀ — there is significant evidence that μ differs from 100","The p-value should be compared to t, not α"]]
+    ]
+  },
+
+  topic11: {
+    label: 'Topic 11',
+    title: 'CI & Hypothesis Testing for the Difference Between Two Population Means',
+    questions: [
+      ["When comparing means from two independent samples, the point estimate for μ1 − μ2 is:",
+       ["x̄1 + x̄2","x̄1 / x̄2","x̄1 − x̄2","s1 − s2"]],
+      ["Two samples are considered \"independent\" when:",
+       ["The same subjects are measured twice, e.g., before and after treatment","The selection of individuals in one sample has no effect on and is unrelated to the selection of individuals in the other sample","The sample sizes are equal","Both samples come from the same population"]],
+      ["For two independent samples, the standard error of x̄1 − x̄2 (using the two-sample t-procedure, unequal variances) is:",
+       ["s1/n1 + s2/n2","√(s1²/n1) − √(s2²/n2)","(s1 + s2)/(n1 + n2)","√(s1²/n1 + s2²/n2)"]],
+      ["The confidence interval for μ1 − μ2 (independent samples) is calculated as:",
+       ["(x̄1 − x̄2) ± t* √(s1²/n1 + s2²/n2)","(x̄1 − x̄2) ± z* √(s1²/n1 + s2²/n2)","(x̄1 − x̄2) ± t*·(s1 + s2)","(x̄1 − x̄2) ± t*·(n1 + n2)"]],
+      ["The degrees of freedom for the two-sample t-procedure (unequal variances, Welch's method) are:",
+       ["Always n1 + n2","Always n1 + n2 − 1","Computed by a conservative approximation formula (often reported by software), typically less than n1 + n2 − 2","Always equal to the smaller of n1 or n2"]],
+      ["The null hypothesis for testing whether two population means are equal is typically written as:",
+       ["H₀: x̄1 = x̄2","H₀: μ1 = μ2 (equivalently, μ1 − μ2 = 0)","H₀: μ1 ≠ μ2","H₀: s1 = s2"]],
+      ["The test statistic for comparing two independent population means is:",
+       ["t = (x̄1 − x̄2) / (n1 + n2)","t = x̄1 / x̄2","t = (x̄1 − x̄2) × (n1 + n2)","t = (x̄1 − x̄2) / √(s1²/n1 + s2²/n2)"]],
+      ["A two-tailed alternative hypothesis for comparing two independent means is written as:",
+       ["Hₐ: μ1 ≠ μ2","Hₐ: μ1 > μ2","Hₐ: μ1 < μ2","Hₐ: μ1 = μ2"]],
+      ["A \"paired\" (matched-pairs) design differs from an independent-samples design in that:",
+       ["The two samples must always have different sizes","Paired designs cannot be analyzed with a t-procedure","Each observation in one sample is naturally linked to a specific observation in the other sample (e.g., before/after measurements on the same subject)","The two sample means must be equal"]],
+      ["In a paired t-test, the analysis is based on:",
+       ["The two original samples analyzed completely separately","The differences d = x1 − x2 for each pair, treated as a single sample of differences","The ratio of the two sample means","The pooled variance of the two samples"]],
+      ["The test statistic for a paired t-test is:",
+       ["t = (x̄1 − x̄2) / √(s1²/n1 + s2²/n2)","t = x̄1 − x̄2","t = d̄ × n","t = d̄ / (s_d/√n), where d̄ is the mean difference and s_d is the standard deviation of the differences"]],
+      ["A researcher measures the blood pressure of the same 20 patients before and after a new medication. This should be analyzed using:",
+       ["A paired t-test, since the same subjects are measured twice","A two-sample independent t-test","A one-proportion z-test","A chi-square test"]],
+      ["A researcher compares the average test scores of students taught by Method A versus students taught by Method B, where each group consists of entirely different students. This should be analyzed using:",
+       ["A paired t-test","A one-sample t-test","A two-sample independent t-test","A one-proportion test"]],
+      ["If a 95% confidence interval for μ1 − μ2 is entirely negative (e.g., −8 to −2), this suggests:",
+       ["μ1 is likely greater than μ2","μ1 is likely less than μ2","μ1 and μ2 are equal","The interval is invalid"]],
+      ["If a 95% confidence interval for μ1 − μ2 contains 0, the corresponding two-tailed test at α = 0.05 would:",
+       ["Reject H₀: μ1 = μ2","Reject H₀ only if the interval is very wide","Be inconclusive regardless of the interval","Fail to reject H₀: μ1 = μ2"]],
+      ["One advantage of a paired design over an independent-samples design is that:",
+       ["It removes variability due to differences between subjects, often increasing the power to detect a true difference","It always requires a larger sample size","It eliminates the need for any statistical test","It guarantees the null hypothesis will be rejected"]],
+      ["Two independent samples: Group 1 has n1 = 30, x̄1 = 82, s1 = 6; Group 2 has n2 = 35, x̄2 = 78, s2 = 7. The point estimate for μ1 − μ2 is:",
+       ["82 + 78 = 160","82/78 ≈ 1.05","82 − 78 = 4","6 − 7 = −1"]],
+      ["Using the same two-sample data (x̄1 = 82, s1 = 6, n1 = 30; x̄2 = 78, s2 = 7, n2 = 35), the standard error of x̄1 − x̄2 is approximately:",
+       ["√(6/30 + 7/35) ≈ 0.59","√(6²/30 + 7²/35) = √(1.2 + 1.4) = √2.6 ≈ 1.61","(6+7)/(30+35) ≈ 0.20","6/30 − 7/35 ≈ 0.00"]],
+      ["A study measures the same 12 athletes' sprint times before and after a training program, finding a mean difference d̄ = −0.3 seconds with s_d = 0.4. The appropriate test is:",
+       ["An independent two-sample t-test with 22 degrees of freedom","A one-proportion test","A chi-square test for independence","A paired t-test with 11 degrees of freedom"]],
+      ["Which of the following is generally true about the two-sample independent t-procedure compared to using a pooled-variance assumption?",
+       ["The unequal-variances (Welch) approach is more broadly valid, since it doesn't assume the two population variances are equal","The pooled approach is always preferred regardless of variance equality","They always give identical degrees of freedom","Neither approach requires independent samples"]]
+    ]
+  },
+
+  topic12: {
+    label: 'Topic 12',
+    title: 'Chi-Square Tests: Goodness of Fit, Homogeneity & Independence',
+    questions: [
+      ["The chi-square test statistic is calculated as:",
+       ["χ² = Σ (O − E)","χ² = Σ O/E","χ² = Σ (O − E)²","χ² = Σ (O − E)² / E, summed over all categories or cells"]],
+      ["In a chi-square test, \"O\" and \"E\" refer to:",
+       ["The observed and expected counts (frequencies) in each category or cell","The odds and expected probability","The observed and estimated means","The outcome and error term"]],
+      ["A chi-square goodness-of-fit test is used to:",
+       ["Compare the means of two populations","Test for a linear relationship between two continuous variables","Compare the observed distribution of a single categorical variable to a hypothesized (expected) distribution","Compare the distribution of a categorical variable across multiple independent samples"]],
+      ["For a goodness-of-fit test with k categories, the degrees of freedom are:",
+       ["k","k − 1","k + 1","k²"]],
+      ["In a goodness-of-fit test, the expected count for a category is calculated as:",
+       ["The observed count for that category","n / k, always","The sample proportion p̂ for that category","n × p₀, where n is the total sample size and p₀ is the hypothesized proportion for that category"]],
+      ["A general condition for the validity of a chi-square test is:",
+       ["Expected counts should generally be at least 5 in each category or cell","The sample size must be exactly 30","All variables must be continuous","The population must be normally distributed"]],
+      ["A chi-square test for homogeneity is used to:",
+       ["Test whether two continuous variables are correlated","Compare a single sample's distribution to a hypothesized distribution","Compare the distribution of a single categorical variable across two or more independent populations or groups","Estimate a population mean"]],
+      ["A chi-square test for independence is used to:",
+       ["Compare a categorical variable's distribution across several separate samples","Test whether there is an association between two categorical variables measured on the same sample","Test whether a sample matches a hypothesized single-variable distribution","Compare two population means"]],
+      ["For a two-way table with r rows and c columns, the degrees of freedom for both the test of homogeneity and the test of independence are:",
+       ["r × c","r + c","r + c − 2","(r − 1)(c − 1)"]],
+      ["In a two-way table, the expected count for a given cell is calculated as:",
+       ["(Row total × column total) / grand total","Row total + column total","Row total / column total","The observed count for that cell"]],
+      ["The key difference between a chi-square test for homogeneity and a chi-square test for independence lies in:",
+       ["The formula used to calculate the test statistic","The degrees of freedom formula","The sampling design — homogeneity involves separate samples from different populations, while independence involves one sample with two categorical variables measured on each subject","Whether expected counts are required"]],
+      ["The null hypothesis for a chi-square test of independence states that:",
+       ["The two variables have equal means","The two categorical variables are independent (not associated) in the population","The two variables are perfectly correlated","The sample sizes are equal"]],
+      ["The null hypothesis for a chi-square test of homogeneity states that:",
+       ["The two variables are correlated","All expected counts equal all observed counts","The populations have equal variances","The distribution of the categorical variable is the same across all the populations or groups being compared"]],
+      ["The chi-square distribution is:",
+       ["Right-skewed and takes only non-negative values","Symmetric and bell-shaped, like the normal distribution","Left-skewed and can take negative values","Uniform over all real numbers"]],
+      ["In a chi-square test, a large test statistic (and correspondingly small p-value) leads to the decision to:",
+       ["Fail to reject the null hypothesis","Increase the sample size before deciding","Reject the null hypothesis","Switch to a t-test instead"]],
+      ["A die is rolled 60 times to test whether it is fair (H₀: each face has probability 1/6). This is an example of:",
+       ["A chi-square test of independence","A chi-square goodness-of-fit test, with expected count 10 for each face","A chi-square test of homogeneity","A two-sample t-test"]],
+      ["A researcher surveys separate random samples of students from three different universities and asks each student's preferred learning format (in-person, online, hybrid), then compares the distributions across universities. This is an example of:",
+       ["A chi-square goodness-of-fit test","A paired t-test","A chi-square test of independence","A chi-square test of homogeneity"]],
+      ["A single random sample of 500 employees is classified by both department (Sales, IT, HR) and job satisfaction level (Low, Medium, High), and the researcher wants to know if department and satisfaction are related. This is an example of:",
+       ["A chi-square test of independence","A chi-square test of homogeneity","A chi-square goodness-of-fit test","A paired t-test"]],
+      ["In a goodness-of-fit test checking whether M&M colors follow a claimed distribution, a sample of 200 candies is collected. If the claimed proportion of blue candies is 0.20, the expected count of blue candies is:",
+       ["200 − 0.20 = 199.8","200/0.20 = 1000","200 × 0.20 = 40","0.20 candies"]],
+      ["In a 2×3 contingency table (2 rows, 3 columns) used for a test of independence, the degrees of freedom are:",
+       ["2 × 3 = 6","(2 − 1)(3 − 1) = 2","2 + 3 = 5","2 + 3 − 2 = 3"]]
+    ]
+  }
+
+};
+/* ================================= */
+
+let currentTopic = Object.keys(TOPICS)[0];
+let startTime = null;
+let timerInterval = null;
+let teamsCompleted = {}; // topicId -> Set of team names already submitted (this browser session)
+
+function buildTabs() {
+  const tabs = document.getElementById('topicTabs');
+  tabs.innerHTML = '';
+  Object.entries(TOPICS).forEach(([id, t]) => {
+    const btn = document.createElement('div');
+    btn.className = 'topic-tab' + (id === currentTopic ? ' active' : '');
+    btn.innerHTML = `${t.label}<span class="status">${t.questions.length} questions</span>`;
+    btn.addEventListener('click', () => selectTopic(id));
+    tabs.appendChild(btn);
+  });
+}
+
+function selectTopic(id) {
+  currentTopic = id;
+  buildTabs();
+  resetToNameGate();
+  document.getElementById('topicHeading').textContent = TOPICS[id].label + ': ' + TOPICS[id].title;
+  document.getElementById('topicSub').textContent = `${TOPICS[id].questions.length} questions — one attempt per team.`;
+  document.getElementById('lbTopicLabel').textContent = TOPICS[id].label;
+  refreshLeaderboard();
+}
+
+function resetToNameGate() {
+  clearInterval(timerInterval);
+  document.getElementById('nameGate').classList.remove('hidden');
+  document.getElementById('quizForm').classList.add('hidden');
+  document.getElementById('resultBox').classList.add('hidden');
+  document.getElementById('quizForm').reset();
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  const name = document.getElementById('teamName').value.trim();
+  if (!name) { alert('Please enter your team name.'); return; }
+  document.getElementById('nameGate').classList.add('hidden');
+  buildQuiz();
+  document.getElementById('quizForm').classList.remove('hidden');
+  startTime = Date.now();
+  timerInterval = setInterval(updateTimer, 1000);
+});
+
+function updateTimer() {
+  const secs = Math.floor((Date.now() - startTime) / 1000);
+  const m = String(Math.floor(secs / 60)).padStart(2, '0');
+  const s = String(secs % 60).padStart(2, '0');
+  document.getElementById('timer').textContent = `${m}:${s}`;
+}
+
+function buildQuiz() {
+  const container = document.getElementById('questionContainer');
+  container.innerHTML = '';
+  const questions = TOPICS[currentTopic].questions;
+  const letters = ['A', 'B', 'C', 'D'];
+  questions.forEach(([stem, choices], qi) => {
+    const div = document.createElement('div');
+    div.className = 'question';
+    div.innerHTML = `
+      <p class="stem">${qi + 1}. ${stem}</p>
+      <div class="choices">
+        ${choices.map((c, ci) => `
+          <label>
+            <input type="radio" name="q${qi}" value="${ci}" required>
+            <strong>${letters[ci]}.</strong> ${c}
+          </label>`).join('')}
+      </div>`;
+    container.appendChild(div);
+  });
+  document.getElementById('progress').textContent = `${questions.length} questions`;
+  document.getElementById('scoreTotal').textContent = questions.length;
+}
+
+document.getElementById('quizForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+  clearInterval(timerInterval);
+
+  const questions = TOPICS[currentTopic].questions;
+  const answers = questions.map((_, qi) => {
+    const checked = document.querySelector(`input[name="q${qi}"]:checked`);
+    return checked ? parseInt(checked.value, 10) : -1;
+  });
+  const durationSec = Math.floor((Date.now() - startTime) / 1000);
+  const name = document.getElementById('teamName').value.trim();
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      body: JSON.stringify({ name, topic: currentTopic, answers, durationSec })
+    });
+    const data = await res.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'Submission failed');
+
+    document.getElementById('quizForm').classList.add('hidden');
+    document.getElementById('resultBox').classList.remove('hidden');
+    document.getElementById('scoreVal').textContent = data.score;
+    document.getElementById('scoreTotal').textContent = data.total;
+    document.getElementById('rankMsg').textContent =
+      `Your team is currently ranked #${data.rank} on the ${TOPICS[currentTopic].label} leaderboard.`;
+    refreshLeaderboard();
+  } catch (err) {
+    alert('Submission failed: ' + err.message + '\nCheck APPS_SCRIPT_URL is set correctly.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Quiz';
+  }
+});
+
+async function refreshLeaderboard() {
+  const body = document.getElementById('leaderboardBody');
+  const topicAtRequest = currentTopic;
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=leaderboard&topic=${topicAtRequest}`);
+    const data = await res.json();
+    if (topicAtRequest !== currentTopic) return; // user switched tabs while this was in flight
+    const board = data.leaderboard || [];
+    if (board.length === 0) {
+      body.innerHTML = `<tr><td colspan="3" style="color:#94a3b8;">No submissions yet</td></tr>`;
+    } else {
+      const medals = ['🥇', '🥈', '🥉'];
+      body.innerHTML = board.map((row, i) => `
+        <tr class="rank-${i + 1 <= 3 ? i + 1 : ''}">
+          <td>${medals[i] || (i + 1)}</td>
+          <td>${escapeHtml(row.name)}</td>
+          <td>${row.score}/${row.total}</td>
+        </tr>`).join('');
+    }
+    document.getElementById('lbUpdated').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="3" style="color:var(--red);">Couldn't load leaderboard</td></tr>`;
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Init
+buildTabs();
+selectTopic(currentTopic);
+setInterval(refreshLeaderboard, 5000);
+</script>
+</body>
+</html>
