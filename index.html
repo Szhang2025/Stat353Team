@@ -30,46 +30,39 @@
   header h1 { margin: 0 0 6px; font-size: 1.5rem; }
   header p { margin: 0; opacity: 0.85; font-size: 0.95rem; }
 
-  /* Topic tabs — horizontally scrollable so 15 topics never eat vertical space on phones */
-  .topic-tabs {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x proximity;
+  /* Topic selector — a dropdown handles 15 topics far better than tabs on
+     any screen size, phone included, with no wrapping/scrolling tricks needed. */
+  .topic-select-wrap {
     max-width: 1100px;
     margin: 16px auto 0;
-    padding: 4px 16px 10px;
+    padding: 0 16px;
   }
-  .topic-tabs::-webkit-scrollbar { height: 5px; }
-  .topic-tabs::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-  .topic-tab {
+  .topic-select-wrap label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+  #topicSelect {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px; /* avoids iOS auto-zoom on focus */
+    font-weight: 600;
+    color: var(--navy);
     background: white;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
-    padding: 10px 16px;
     cursor: pointer;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: #475569;
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    white-space: nowrap;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 18px;
+    padding-right: 40px;
   }
-  .topic-tab:hover { border-color: var(--accent); }
-  .topic-tab.active {
-    border-color: var(--navy);
-    background: var(--navy);
-    color: white;
-  }
-  .topic-tab .status {
-    display: block;
-    font-weight: 400;
-    font-size: 0.75rem;
-    opacity: 0.8;
-    margin-top: 2px;
-  }
+  #topicSelect:focus { border-color: var(--navy); outline: none; }
 
   .layout {
     display: grid;
@@ -180,7 +173,10 @@
   <p>Statistical Methods for Engineering &nbsp;|&nbsp; Teams compete topic by topic &nbsp;|&nbsp; Best score wins each round</p>
 </header>
 
-<div class="topic-tabs" id="topicTabs"></div>
+<div class="topic-select-wrap">
+  <label for="topicSelect">Choose a topic:</label>
+  <select id="topicSelect"></select>
+</div>
 
 <div class="layout">
   <!-- LEFT: Quiz -->
@@ -230,7 +226,7 @@
 
 <script>
 /* ============ CONFIGURE THIS ============ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZ4itzIHCdmc_saKucAIVk-Qzck9rqkFFPeraNMMmOdyNR5XSfYax4iwzQzcQnQqlMOw/exec'; // ends in /exec
+const APPS_SCRIPT_URL = 'PASTE_YOUR_DEPLOYED_WEB_APP_URL_HERE'; // ends in /exec
 /* ========================================= */
 
 /* ============ TOPICS ============
@@ -955,21 +951,22 @@ let startTime = null;
 let timerInterval = null;
 let teamsCompleted = {}; // topicId -> Set of team names already submitted (this browser session)
 
-function buildTabs() {
-  const tabs = document.getElementById('topicTabs');
-  tabs.innerHTML = '';
+function buildTopicSelect() {
+  const select = document.getElementById('topicSelect');
+  select.innerHTML = '';
   Object.entries(TOPICS).forEach(([id, t]) => {
-    const btn = document.createElement('div');
-    btn.className = 'topic-tab' + (id === currentTopic ? ' active' : '');
-    btn.innerHTML = `${t.label}<span class="status">${t.questions.length} questions</span>`;
-    btn.addEventListener('click', () => selectTopic(id));
-    tabs.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${t.label}: ${t.title} (${t.questions.length} questions)`;
+    select.appendChild(opt);
   });
+  select.value = currentTopic;
+  select.addEventListener('change', () => selectTopic(select.value));
 }
 
 function selectTopic(id) {
   currentTopic = id;
-  buildTabs();
+  document.getElementById('topicSelect').value = id;
   resetToNameGate();
   document.getElementById('topicHeading').textContent = TOPICS[id].label + ': ' + TOPICS[id].title;
   document.getElementById('topicSub').textContent = `${TOPICS[id].questions.length} questions — one attempt per team.`;
@@ -1122,7 +1119,7 @@ function escapeHtml(str) {
 }
 
 // Init
-buildTabs();
+buildTopicSelect();
 selectTopic(currentTopic);
 setInterval(refreshLeaderboard, 5000);
 </script>
