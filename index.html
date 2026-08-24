@@ -1108,7 +1108,7 @@ async function refreshLeaderboard() {
     document.getElementById('lbUpdated').textContent =
       'Updated ' + new Date().toLocaleTimeString();
   } catch (err) {
-    body.innerHTML = `<tr><td colspan="3" style="color:var(--red);">Couldn't load leaderboard</td></tr>`;
+    body.innerHTML = `<tr><td colspan="3" style="color:var(--red);">No data yet.</td></tr>`;
   }
 }
 
