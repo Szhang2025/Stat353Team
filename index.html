@@ -165,20 +165,6 @@
     table.leaderboard th, table.leaderboard td { padding: 6px 4px; }
   }
 </style>
-
-<!-- MathJax: renders $...$ LaTeX that comes from the Questions sheet -->
-<script>
-  MathJax = {
-    tex: {
-      inlineMath: [['$', '$'], ['\\(', '\\)']],
-      displayMath: [['$$', '$$'], ['\\[', '\\]']]
-    },
-    svg: { fontCache: 'global' },
-    options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
-  };
-</script>
-<script id="MathJax-script" async
-        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
@@ -297,7 +283,6 @@ function selectTopic(id) {
   document.getElementById('topicSub').textContent = `${TOPICS[id].count} questions — one attempt per team.`;
   document.getElementById('lbTopicLabel').textContent = TOPICS[id].label;
   refreshLeaderboard();
-  typesetMath(); // topic heading/subtitle may contain math
 }
 
 function resetToNameGate() {
@@ -374,7 +359,6 @@ function buildQuiz() {
   });
   document.getElementById('progress').textContent = `${questions.length} questions`;
   document.getElementById('scoreTotal').textContent = questions.length;
-  typesetMath(); // render $...$ in the newly inserted questions
 }
 
 document.getElementById('quizForm').addEventListener('submit', async (e) => {
@@ -409,7 +393,6 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
     document.getElementById('rankMsg').textContent =
       `Your team is currently ranked #${data.rank} on the ${TOPICS[currentTopic].label} leaderboard.`;
     refreshLeaderboard();
-    typesetMath(); // result box may contain math
   } catch (err) {
     alert('Submission failed: ' + err.message + '\nCheck APPS_SCRIPT_URL is set correctly.');
     submitBtn.disabled = false;
@@ -447,15 +430,6 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
-}
-
-// Render any $...$ math currently in the DOM. Safe to call before MathJax loads.
-function typesetMath() {
-  if (window.MathJax && MathJax.typesetPromise) {
-    MathJax.typesetPromise().catch(function (err) {
-      console.warn('MathJax typeset failed:', err);
-    });
-  }
 }
 
 // Init
