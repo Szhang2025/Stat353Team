@@ -5,166 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>STAT 353 — Topic Quiz Challenge</title>
 <style>
-  :root {
-    --navy: #0f2942;
-    --accent: #d97706;
-    --green: #15803d;
-    --red: #b91c1c;
-    --bg: #f4f6f8;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    margin: 0;
-    color: #1f2937;
-    font-size: 16px;
-  }
-  header {
-    background: var(--navy);
-    color: white;
-    padding: 24px 20px;
-    text-align: center;
-  }
-  header h1 { margin: 0 0 6px; font-size: 1.5rem; }
-  header p { margin: 0; opacity: 0.85; font-size: 0.95rem; }
-
-  /* Topic selector — a dropdown handles 15 topics far better than tabs on
-     any screen size, phone included, with no wrapping/scrolling tricks needed. */
-  .topic-select-wrap {
-    max-width: 1100px;
-    margin: 16px auto 0;
-    padding: 0 16px;
-  }
-  .topic-select-wrap label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 6px;
-  }
-  #topicSelect {
-    width: 100%;
-    padding: 12px 14px;
-    font-size: 16px; /* avoids iOS auto-zoom on focus */
-    font-weight: 600;
-    color: var(--navy);
-    background: white;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 18px;
-    padding-right: 40px;
-  }
-  #topicSelect:focus { border-color: var(--navy); outline: none; }
-
-  .layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-    max-width: 1100px;
-    margin: 16px auto 24px;
-    padding: 0 16px;
-  }
-  @media (min-width: 900px) {
-    .layout { grid-template-columns: 2fr 1fr; align-items: start; }
-  }
-
-  .card {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    padding: 20px;
-  }
-
-  #nameGate label { display: block; margin-bottom: 8px; font-weight: 600; }
-  #nameGate input {
-    width: 100%; padding: 12px; font-size: 16px; /* 16px prevents iOS auto-zoom on focus */
-    border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 12px;
-  }
-  #nameGate .hint { font-size: 0.85rem; color: #64748b; margin-top: -4px; margin-bottom: 14px; }
-  button {
-    background: var(--navy); color: white; border: none;
-    padding: 12px 18px; font-size: 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    min-height: 46px; /* comfortable tap target */
-  }
-  button:hover { opacity: 0.9; }
-  button:disabled { background: #94a3b8; cursor: not-allowed; }
-
-  .question {
-    border-bottom: 1px solid #e5e7eb;
-    padding: 16px 0;
-  }
-  .question:last-child { border-bottom: none; }
-  .question p.stem { font-weight: 600; margin: 0 0 10px; line-height: 1.4; }
-  .choices label {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 12px 12px;
-    margin-bottom: 8px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    cursor: pointer;
-    min-height: 44px; /* comfortable tap target on phones */
-    line-height: 1.4;
-  }
-  .choices label:active { background: #f1f5f9; }
-  .choices label:hover { background: #f8fafc; }
-  .choices input {
-    margin: 3px 0 0;
-    flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
-  }
-
-  #timer {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    color: var(--accent);
-  }
-
-  #resultBox { text-align: center; padding: 30px 20px; }
-  #resultBox .score { font-size: 2.4rem; font-weight: 700; color: var(--green); }
-
-  table.leaderboard { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-  table.leaderboard th, table.leaderboard td {
-    text-align: left; padding: 8px 6px; border-bottom: 1px solid #e5e7eb;
-  }
-  table.leaderboard th { color: #64748b; font-weight: 600; }
-  tr.rank-1 { background: #fef3c7; font-weight: 700; }
-  tr.rank-2 { background: #f1f5f9; }
-  tr.rank-3 { background: #f8fafc; }
-  #lbUpdated { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
-  .hidden { display: none !important; }
-  #topicHeading { margin: 0 0 4px; font-size: 1.15rem; color: var(--navy); }
-  #topicSub { margin: 0 0 16px; font-size: 0.88rem; color: #64748b; }
-
-  /* ---------- Phone-specific tightening ---------- */
-  @media (max-width: 600px) {
-    header { padding: 16px 14px; }
-    header h1 { font-size: 1.15rem; }
-    header p { font-size: 0.8rem; }
-    .layout { padding: 0 10px; gap: 14px; margin: 12px auto 16px; }
-    .card { padding: 14px; border-radius: 8px; }
-    #topicHeading { font-size: 1rem; }
-    #topicSub { font-size: 0.82rem; margin-bottom: 12px; }
-    .question p.stem { font-size: 0.95rem; }
-    .choices label { font-size: 0.92rem; }
-    button { font-size: 0.95rem; }
-    table.leaderboard { font-size: 0.82rem; }
-    table.leaderboard th, table.leaderboard td { padding: 6px 4px; }
+  :root { --navy:#0f2942; --accent:#d97706; --green:#15803d; --red:#b91c1c; --bg:#f4f6f8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { -webkit-text-size-adjust:100%; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); margin:0; color:#1f2937; font-size:16px; }
+  header { background:var(--navy); color:white; padding:24px 20px; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:1.5rem; }
+  header p { margin:0; opacity:0.85; font-size:0.95rem; }
+  .topic-select-wrap { max-width:1100px; margin:16px auto 0; padding:0 16px; }
+  .topic-select-wrap label { display:block; font-size:0.85rem; font-weight:600; color:#475569; margin-bottom:6px; }
+  #topicSelect { width:100%; padding:12px 14px; font-size:16px; font-weight:600; color:var(--navy); background:white; border:2px solid #e2e8f0; border-radius:8px; cursor:pointer; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat:no-repeat; background-position:right 14px center; background-size:18px; padding-right:40px; }
+  #topicSelect:focus { border-color:var(--navy); outline:none; }
+  .layout { display:grid; grid-template-columns:1fr; gap:20px; max-width:1100px; margin:16px auto 24px; padding:0 16px; }
+  @media (min-width:900px) { .layout { grid-template-columns:2fr 1fr; align-items:start; } }
+  .card { background:white; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); padding:20px; }
+  #nameGate label { display:block; margin-bottom:8px; font-weight:600; }
+  #nameGate input { width:100%; padding:12px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:12px; }
+  #nameGate .hint { font-size:0.85rem; color:#64748b; margin-top:-4px; margin-bottom:14px; }
+  button { background:var(--navy); color:white; border:none; padding:12px 18px; font-size:1rem; border-radius:6px; cursor:pointer; width:100%; min-height:46px; }
+  button:hover { opacity:0.9; }
+  button:disabled { background:#94a3b8; cursor:not-allowed; }
+  .question { border-bottom:1px solid #e5e7eb; padding:16px 0; }
+  .question:last-child { border-bottom:none; }
+  .question p.stem { font-weight:600; margin:0 0 10px; line-height:1.4; }
+  .choices label { display:flex; align-items:flex-start; gap:8px; padding:12px 12px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; min-height:44px; line-height:1.4; }
+  .choices label:active { background:#f1f5f9; }
+  .choices label:hover { background:#f8fafc; }
+  .choices input { margin:3px 0 0; flex:0 0 auto; width:18px; height:18px; }
+  #timer { font-variant-numeric:tabular-nums; font-weight:600; color:var(--accent); }
+  #resultBox { text-align:center; padding:30px 20px; }
+  #resultBox .score { font-size:2.4rem; font-weight:700; color:var(--green); }
+  table.leaderboard { width:100%; border-collapse:collapse; font-size:0.92rem; }
+  table.leaderboard th, table.leaderboard td { text-align:left; padding:8px 6px; border-bottom:1px solid #e5e7eb; }
+  table.leaderboard th { color:#64748b; font-weight:600; }
+  tr.rank-1 { background:#fef3c7; font-weight:700; }
+  tr.rank-2 { background:#f1f5f9; }
+  tr.rank-3 { background:#f8fafc; }
+  #lbUpdated { font-size:0.78rem; color:#94a3b8; margin-top:8px; }
+  .hidden { display:none !important; }
+  #topicHeading { margin:0 0 4px; font-size:1.15rem; color:var(--navy); }
+  #topicSub { margin:0 0 16px; font-size:0.88rem; color:#64748b; }
+  @media (max-width:600px) {
+    header { padding:16px 14px; } header h1 { font-size:1.15rem; } header p { font-size:0.8rem; }
+    .layout { padding:0 10px; gap:14px; margin:12px auto 16px; } .card { padding:14px; border-radius:8px; }
+    #topicHeading { font-size:1rem; } #topicSub { font-size:0.82rem; margin-bottom:12px; }
+    .question p.stem { font-size:0.95rem; } .choices label { font-size:0.92rem; }
+    button { font-size:0.95rem; } table.leaderboard { font-size:0.82rem; }
+    table.leaderboard th, table.leaderboard td { padding:6px 4px; }
   }
 </style>
+
+<!-- MathJax: renders $...$ LaTeX for the hand-wrapped formula cells -->
+<script>
+  MathJax = {
+    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+    svg: { fontCache: 'global' },
+    options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
 
@@ -179,11 +78,9 @@
 </div>
 
 <div class="layout">
-  <!-- LEFT: Quiz -->
   <div>
     <h2 id="topicHeading"></h2>
     <p id="topicSub"></p>
-
     <div class="card" id="nameGate">
       <label for="teamName">Enter your team name to begin:</label>
       <input type="text" id="teamName" placeholder="e.g. Team Bernoulli" autocomplete="off">
@@ -192,53 +89,35 @@
       <div class="hint">Each team gets one attempt per topic — best score wins that round.</div>
       <button id="startBtn">Start Quiz</button>
     </div>
-
     <form class="card hidden" id="quizForm">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div>Time elapsed: <span id="timer">00:00</span></div>
         <div id="progress" style="color:#64748b; font-size:0.9rem;"></div>
       </div>
       <div id="questionContainer"></div>
-      <div style="margin-top: 16px; text-align:center;">
+      <div style="margin-top:16px; text-align:center;">
         <button type="submit" id="submitBtn">Submit Quiz</button>
       </div>
     </form>
-
     <div class="card hidden" id="resultBox">
       <div>Your team scored</div>
       <div class="score"><span id="scoreVal">0</span>/<span id="scoreTotal">20</span></div>
       <div id="rankMsg" style="margin-top:10px; color:#475569;"></div>
     </div>
   </div>
-
-  <!-- RIGHT: Live leaderboard -->
   <div class="card">
     <h3 style="margin-top:0;">🏆 Live Leaderboard — <span id="lbTopicLabel"></span></h3>
     <table class="leaderboard">
       <thead><tr><th>#</th><th>Team</th><th>Score</th></tr></thead>
-      <tbody id="leaderboardBody">
-        <tr><td colspan="3" style="color:#94a3b8;">Loading…</td></tr>
-      </tbody>
+      <tbody id="leaderboardBody"><tr><td colspan="3" style="color:#94a3b8;">Loading…</td></tr></tbody>
     </table>
     <div id="lbUpdated"></div>
   </div>
 </div>
 
 <script>
-/* ============ CONFIGURE THIS ============ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZ4itzIHCdmc_saKucAIVk-Qzck9rqkFFPeraNMMmOdyNR5XSfYax4iwzQzcQnQqlMOw/exec'; // ends in /exec
-/* ========================================= */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZ4itzIHCdmc_saKucAIVk-Qzck9rqkFFPeraNMMmOdyNR5XSfYax4iwzQzcQnQqlMOw/exec';
 
-/* ============ TOPICS ============
-   The questions are NOT stored in this page. They live in the "Questions" tab
-   of the Google Sheet, and the Apps Script sends them only after a team enters
-   the correct topic password (they are loaded into `questions` at that point).
-   To add a new topic later:
-   1. Add a line below (the key must match the TopicID column in the Questions
-      tab and a key in ANSWER_KEYS in Code.gs). `count` = number of questions.
-   2. Add its questions to the Questions tab (one row per question), its answer
-      indexes to ANSWER_KEYS, and a row for it in the Passwords tab.
-*/
 const TOPICS = {
   topic1: { label: "Topic 1", title: "Experiment, Sample Space, Events & Counting Methods", count: 20, questions: null },
   topic2: { label: "Topic 2", title: "Probability, Conditional Probability, Independence & Bayes' Formula", count: 20, questions: null },
@@ -256,11 +135,16 @@ const TOPICS = {
   topic14: { label: "Topic 14", title: "Simple & Multiple Linear Regression", count: 20, questions: null },
   topic15: { label: "Topic 15", title: "Control Charts: x̄, R & p Chart", count: 20, questions: null }
 };
-/* ================================= */
+
 let currentTopic = Object.keys(TOPICS)[0];
 let startTime = null;
 let timerInterval = null;
-let teamsCompleted = {}; // topicId -> Set of team names already submitted (this browser session)
+
+function typesetMath() {
+  if (window.MathJax && MathJax.typesetPromise) {
+    MathJax.typesetPromise().catch(function (err) { console.warn('MathJax typeset failed:', err); });
+  }
+}
 
 function buildTopicSelect() {
   const select = document.getElementById('topicSelect');
@@ -283,6 +167,7 @@ function selectTopic(id) {
   document.getElementById('topicSub').textContent = `${TOPICS[id].count} questions — one attempt per team.`;
   document.getElementById('lbTopicLabel').textContent = TOPICS[id].label;
   refreshLeaderboard();
+  typesetMath();
 }
 
 function resetToNameGate() {
@@ -292,38 +177,30 @@ function resetToNameGate() {
   document.getElementById('resultBox').classList.add('hidden');
   document.getElementById('quizForm').reset();
   document.getElementById('topicPassword').value = '';
-  Object.values(TOPICS).forEach(t => { t.questions = null; }); // questions are re-fetched for each attempt
+  Object.values(TOPICS).forEach(t => { t.questions = null; });
 }
 
 document.getElementById('startBtn').addEventListener('click', async () => {
   const name = document.getElementById('teamName').value.trim();
   const password = document.getElementById('topicPassword').value;
   if (!name) { alert('Please enter your team name.'); return; }
-  if (!password) { alert('Please enter this topic\'s password.'); return; }
-
+  if (!password) { alert("Please enter this topic's password."); return; }
   const startBtn = document.getElementById('startBtn');
   startBtn.disabled = true;
   startBtn.textContent = 'Loading questions…';
   try {
-    // The server checks the password and only then returns the questions.
     const res = await fetch(`${APPS_SCRIPT_URL}?action=questions&topic=${currentTopic}&password=${encodeURIComponent(password)}`);
     const data = await res.json();
     if (data.status !== 'ok' || !Array.isArray(data.questions) || data.questions.length === 0) {
       alert(data.message || 'Could not load the questions for this topic.');
-      startBtn.disabled = false;
-      startBtn.textContent = 'Start Quiz';
-      return;
+      startBtn.disabled = false; startBtn.textContent = 'Start Quiz'; return;
     }
     TOPICS[currentTopic].questions = data.questions;
   } catch (err) {
-    alert('Could not load the quiz: ' + err.message + '\nCheck APPS_SCRIPT_URL is set correctly.');
-    startBtn.disabled = false;
-    startBtn.textContent = 'Start Quiz';
-    return;
+    alert('Could not load the quiz: ' + err.message + '\nCheck APPS_SCRIPT_URL.');
+    startBtn.disabled = false; startBtn.textContent = 'Start Quiz'; return;
   }
-  startBtn.disabled = false;
-  startBtn.textContent = 'Start Quiz';
-
+  startBtn.disabled = false; startBtn.textContent = 'Start Quiz';
   document.getElementById('nameGate').classList.add('hidden');
   buildQuiz();
   document.getElementById('quizForm').classList.remove('hidden');
@@ -359,6 +236,7 @@ function buildQuiz() {
   });
   document.getElementById('progress').textContent = `${questions.length} questions`;
   document.getElementById('scoreTotal').textContent = questions.length;
+  typesetMath();
 }
 
 document.getElementById('quizForm').addEventListener('submit', async (e) => {
@@ -380,12 +258,11 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
   try {
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ name, topic: currentTopic, answers, durationSec, password })
     });
     const data = await res.json();
     if (data.status !== 'ok') throw new Error(data.message || 'Submission failed');
-
     document.getElementById('quizForm').classList.add('hidden');
     document.getElementById('resultBox').classList.remove('hidden');
     document.getElementById('scoreVal').textContent = data.score;
@@ -393,10 +270,10 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
     document.getElementById('rankMsg').textContent =
       `Your team is currently ranked #${data.rank} on the ${TOPICS[currentTopic].label} leaderboard.`;
     refreshLeaderboard();
+    typesetMath();
   } catch (err) {
-    alert('Submission failed: ' + err.message + '\nCheck APPS_SCRIPT_URL is set correctly.');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit Quiz';
+    alert('Submission failed: ' + err.message + '\nCheck APPS_SCRIPT_URL.');
+    submitBtn.disabled = false; submitBtn.textContent = 'Submit Quiz';
   }
 });
 
@@ -406,7 +283,7 @@ async function refreshLeaderboard() {
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=leaderboard&topic=${topicAtRequest}`);
     const data = await res.json();
-    if (topicAtRequest !== currentTopic) return; // user switched tabs while this was in flight
+    if (topicAtRequest !== currentTopic) return;
     const board = data.leaderboard || [];
     if (board.length === 0) {
       body.innerHTML = `<tr><td colspan="3" style="color:#94a3b8;">No submissions yet</td></tr>`;
@@ -419,8 +296,7 @@ async function refreshLeaderboard() {
           <td>${row.score}/${row.total}</td>
         </tr>`).join('');
     }
-    document.getElementById('lbUpdated').textContent =
-      'Updated ' + new Date().toLocaleTimeString();
+    document.getElementById('lbUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (err) {
     body.innerHTML = `<tr><td colspan="3" style="color:var(--red);">No data yet.</td></tr>`;
   }
@@ -432,7 +308,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Init
 buildTopicSelect();
 selectTopic(currentTopic);
 setInterval(refreshLeaderboard, 5000);
