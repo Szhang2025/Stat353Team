@@ -7,6 +7,9 @@
 <style>
   :root { --navy:#0f2942; --accent:#d97706; --green:#15803d; --red:#b91c1c; --bg:#f4f6f8; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  /* MathJax draws fractions/binomials from its own box measurements; the border-box reset above breaks them
+     (missing fraction bars, off-centre numbers), so MathJax's elements are excluded from it. */
+  mjx-container, mjx-container * { box-sizing:content-box; }
   html { -webkit-text-size-adjust:100%; }
   body { font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); margin:0; color:#1f2937; font-size:16px; }
   header { background:var(--navy); color:white; padding:24px 20px; text-align:center; }
@@ -42,6 +45,7 @@
   tr.rank-2 { background:#f1f5f9; }
   tr.rank-3 { background:#f8fafc; }
   #lbUpdated { font-size:0.78rem; color:#94a3b8; margin-top:8px; }
+  #lbLocked input { width:100%; padding:12px; font-size:16px; border:1px solid #cbd5e1; border-radius:6px; margin-bottom:12px; }
   .hidden { display:none !important; }
   #topicHeading { margin:0 0 4px; font-size:1.15rem; color:var(--navy); }
   #topicSub { margin:0 0 16px; font-size:0.88rem; color:#64748b; }
@@ -105,13 +109,27 @@
       <div id="rankMsg" style="margin-top:10px; color:#475569;"></div>
     </div>
   </div>
-  <div class="card">
-    <h3 style="margin-top:0;">🏆 Live Leaderboard — <span id="lbTopicLabel"></span></h3>
-    <table class="leaderboard">
-      <thead><tr><th>#</th><th>Team</th><th>Score</th></tr></thead>
-      <tbody id="leaderboardBody"><tr><td colspan="3" style="color:#94a3b8;">Loading…</td></tr></tbody>
-    </table>
-    <div id="lbUpdated"></div>
+  <div class="card" id="lbCard">
+    <!-- Locked state (default): nothing about the leaderboard is requested or shown -->
+    <div id="lbLocked">
+      <h3 style="margin-top:0;">🔒 Leaderboard</h3>
+      <p style="margin:0 0 12px; font-size:0.88rem; color:#64748b;">The leaderboard is hidden. Enter the password to show it.</p>
+      <input type="password" id="lbPassword" placeholder="Leaderboard password" autocomplete="off">
+      <button id="lbUnlockBtn" type="button">Show leaderboard</button>
+      <div id="lbError" style="color:var(--red); font-size:0.85rem; margin-top:8px;"></div>
+    </div>
+    <!-- Unlocked state -->
+    <div id="lbOpen" class="hidden">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+        <h3 style="margin:0;">🏆 Live Leaderboard — <span id="lbTopicLabel"></span></h3>
+        <button id="lbHideBtn" type="button" style="width:auto; min-height:0; padding:4px 10px; font-size:0.8rem;">Hide</button>
+      </div>
+      <table class="leaderboard">
+        <thead><tr><th>#</th><th>Team</th><th>Score</th></tr></thead>
+        <tbody id="leaderboardBody"><tr><td colspan="3" style="color:#94a3b8;">Loading…</td></tr></tbody>
+      </table>
+      <div id="lbUpdated"></div>
+    </div>
   </div>
 </div>
 
@@ -224,12 +242,12 @@ function buildQuiz() {
     const div = document.createElement('div');
     div.className = 'question';
     div.innerHTML = `
-      <p class="stem">${qi + 1}. ${stem}</p>
+      <p class="stem">${qi + 1}. ${escapeHtml(stem)}</p>
       <div class="choices">
         ${choices.map((c, ci) => `
           <label>
             <input type="radio" name="q${qi}" value="${ci}" required>
-            <strong>${letters[ci]}.</strong> ${c}
+            <strong>${letters[ci]}.</strong> ${escapeHtml(c)}
           </label>`).join('')}
       </div>`;
     container.appendChild(div);
@@ -277,30 +295,82 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
   }
 });
 
-async function refreshLeaderboard() {
+// ---------- Leaderboard (hidden until the password is entered) ----------
+// The password is held in memory only: reloading the page locks the leaderboard again.
+// The server also refuses to send leaderboard data without the correct password.
+let lbPassword = '';
+
+function showLeaderboardPanel(open) {
+  document.getElementById('lbLocked').classList.toggle('hidden', open);
+  document.getElementById('lbOpen').classList.toggle('hidden', !open);
+}
+
+function lockLeaderboard(message) {
+  lbPassword = '';
+  document.getElementById('lbPassword').value = '';
+  document.getElementById('lbError').textContent = message || '';
+  showLeaderboardPanel(false);
+}
+
+async function fetchLeaderboard(topic, pw) {
+  const res = await fetch(`${APPS_SCRIPT_URL}?action=leaderboard&topic=${topic}&lbpw=${encodeURIComponent(pw)}`);
+  return res.json();
+}
+
+function renderLeaderboard(board) {
   const body = document.getElementById('leaderboardBody');
-  const topicAtRequest = currentTopic;
+  if (board.length === 0) {
+    body.innerHTML = `<tr><td colspan="3" style="color:#94a3b8;">No submissions yet</td></tr>`;
+  } else {
+    const medals = ['🥇', '🥈', '🥉'];
+    body.innerHTML = board.map((row, i) => `
+      <tr class="rank-${i + 1 <= 3 ? i + 1 : ''}">
+        <td>${medals[i] || (i + 1)}</td>
+        <td>${escapeHtml(row.name)}</td>
+        <td>${row.score}/${row.total}</td>
+      </tr>`).join('');
+  }
+  document.getElementById('lbUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+async function unlockLeaderboard() {
+  const pw = document.getElementById('lbPassword').value;
+  const err = document.getElementById('lbError');
+  err.textContent = '';
+  if (!pw) { err.textContent = 'Enter the leaderboard password.'; return; }
+  const btn = document.getElementById('lbUnlockBtn');
+  btn.disabled = true; btn.textContent = 'Checking…';
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=leaderboard&topic=${topicAtRequest}`);
-    const data = await res.json();
-    if (topicAtRequest !== currentTopic) return;
-    const board = data.leaderboard || [];
-    if (board.length === 0) {
-      body.innerHTML = `<tr><td colspan="3" style="color:#94a3b8;">No submissions yet</td></tr>`;
-    } else {
-      const medals = ['🥇', '🥈', '🥉'];
-      body.innerHTML = board.map((row, i) => `
-        <tr class="rank-${i + 1 <= 3 ? i + 1 : ''}">
-          <td>${medals[i] || (i + 1)}</td>
-          <td>${escapeHtml(row.name)}</td>
-          <td>${row.score}/${row.total}</td>
-        </tr>`).join('');
-    }
-    document.getElementById('lbUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
-  } catch (err) {
-    body.innerHTML = `<tr><td colspan="3" style="color:var(--red);">No data yet.</td></tr>`;
+    const data = await fetchLeaderboard(currentTopic, pw);
+    if (data.status !== 'ok') { err.textContent = 'Incorrect password.'; return; }
+    lbPassword = pw;
+    document.getElementById('lbPassword').value = '';
+    showLeaderboardPanel(true);
+    renderLeaderboard(data.leaderboard || []);
+  } catch (e) {
+    err.textContent = 'Could not reach the server. Try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Show leaderboard';
   }
 }
+
+async function refreshLeaderboard() {
+  if (!lbPassword) return;                       // locked: make no request at all
+  const topicAtRequest = currentTopic;
+  try {
+    const data = await fetchLeaderboard(topicAtRequest, lbPassword);
+    if (topicAtRequest !== currentTopic) return;
+    if (data.status !== 'ok') { lockLeaderboard('The leaderboard was locked again. Enter the password to reopen it.'); return; }
+    renderLeaderboard(data.leaderboard || []);
+  } catch (err) {
+    document.getElementById('leaderboardBody').innerHTML =
+      `<tr><td colspan="3" style="color:var(--red);">No data yet.</td></tr>`;
+  }
+}
+
+document.getElementById('lbUnlockBtn').addEventListener('click', unlockLeaderboard);
+document.getElementById('lbPassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); unlockLeaderboard(); } });
+document.getElementById('lbHideBtn').addEventListener('click', () => lockLeaderboard(''));
 
 function escapeHtml(str) {
   const div = document.createElement('div');
