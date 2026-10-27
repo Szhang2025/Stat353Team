@@ -30,11 +30,13 @@
   button:disabled { background:#94a3b8; cursor:not-allowed; }
   .question { border-bottom:1px solid #e5e7eb; padding:16px 0; }
   .question:last-child { border-bottom:none; }
-  .question p.stem { font-weight:600; margin:0 0 10px; line-height:1.4; }
-  .choices label { display:flex; align-items:flex-start; gap:8px; padding:12px 12px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; min-height:44px; line-height:1.4; }
+  .question p.stem { font-weight:600; margin:0 0 10px; line-height:1.6; }
+  .choices label { display:flex; align-items:flex-start; gap:8px; padding:12px 12px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px; cursor:pointer; min-height:44px; line-height:1.6; }
   .choices label:active { background:#f1f5f9; }
   .choices label:hover { background:#f8fafc; }
   .choices input { margin:3px 0 0; flex:0 0 auto; width:18px; height:18px; }
+  .choice-letter { flex:0 0 auto; }
+  .choice-text { flex:1 1 auto; min-width:0; }   /* text and inline math flow together on the same baseline */
   #timer { font-variant-numeric:tabular-nums; font-weight:600; color:var(--accent); }
   #resultBox { text-align:center; padding:30px 20px; }
   #resultBox .score { font-size:2.4rem; font-weight:700; color:var(--green); }
@@ -247,7 +249,8 @@ function buildQuiz() {
         ${choices.map((c, ci) => `
           <label>
             <input type="radio" name="q${qi}" value="${ci}" required>
-            <strong>${letters[ci]}.</strong> ${escapeHtml(c)}
+            <strong class="choice-letter">${letters[ci]}.</strong>
+            <span class="choice-text">${escapeHtml(c)}</span>
           </label>`).join('')}
       </div>`;
     container.appendChild(div);
